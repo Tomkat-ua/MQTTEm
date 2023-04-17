@@ -3,7 +3,7 @@
 import datetime
 import calendar
 # import MySQLdb
-appver = "0.0.2"
+appver = "0.0.3"
 appname = "Energy monitor MQTT extractor"
 appshortname = "MQTTEm"
 
