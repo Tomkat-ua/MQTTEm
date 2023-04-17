@@ -21,14 +21,14 @@ from datetime import datetime
 print(appname + " ver. "+appver)
 tab='  |'
 
-env ='dev' #prod
+env ='prod' #dev/prod
 
 if env == 'prod':
     # server_port =int(environ.get('SERVER_PORT'))
     get_delay = int(environ.get('GET_DELAY'))
     broker = environ.get('BROKER_IP')
     port = int(environ.get('BROKER_PORT'))
-    topic_pattern = environ.get('TOPIC')
+    # topic_pattern = environ.get('TOPIC')
     username = environ.get('USERNAME')
     password = environ.get('PASSWORD')
 else:
@@ -36,7 +36,6 @@ else:
     get_delay = 10
     broker = '192.168.2.7'
     port = 1883
-
     username = 'mqtt'
     password = 'mqtt001'
 
