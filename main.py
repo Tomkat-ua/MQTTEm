@@ -2,19 +2,18 @@
 #### Energy monitor MQTT extractor
 import datetime
 import calendar
-import MySQLdb
-appver = "0.0.1"
+# import MySQLdb
+appver = "0.0.2"
 appname = "Energy monitor MQTT extractor"
 appshortname = "MQTTEm"
 
 import random
-
 from paho.mqtt import client as mqtt_client
-
+from prometheus_client import start_http_server, Gauge
 from time import sleep as sleep
 from datetime import datetime
 # from os import environ as environ
-import os
+# import os
 #import bot,asyncio
 
 # os.environ['TZ'] = 'Europe/London'
@@ -25,7 +24,7 @@ tab='  |'
 env ='dev' #prod
 
 if env == 'prod':
-    server_port =int(environ.get('SERVER_PORT'))
+    # server_port =int(environ.get('SERVER_PORT'))
     get_delay = int(environ.get('GET_DELAY'))
     broker = environ.get('BROKER_IP')
     port = int(environ.get('BROKER_PORT'))
@@ -43,14 +42,11 @@ else:
 
 # generate client ID with pub prefix randomly
 client_id = f'python-mqtt-{random.randint(0, 100)}'
-# topic_pattern = "monitors/+/debug/#"
-
-
 
 # topic_pattern = "monitors/+/sensor/#"
-# MQTT_VALUE = Gauge('esphome_sensor_state', 'topic', ['device_type','device_name','sensor_type','sensor_name','data'])
-# APP_INFO = Gauge('app_info', 'Return app info',['appname','appshortname','version'])
-# APP_INFO.labels(appname,appshortname,appver).set(1)
+MQTT_VALUE = Gauge('esphome_sensor_state', 'topic', ['device','topic','sensor','data'])
+APP_INFO = Gauge('app_info', 'Return app info',['appname','appshortname','version'])
+APP_INFO.labels(appname,appshortname,appver).set(1)
 
 
 def get_time():
@@ -59,9 +55,6 @@ def get_time():
     utc_time = calendar.timegm(date.utctimetuple())
     return(utc_time)
 
-    # presentDate = datetime.now()
-    # unix_timestamp = datetime.timestamp(presentDate)*1000
-    # return(unix_timestamp)
 def connect_mqtt() -> mqtt_client:
     def on_connect(client, userdata, flags, rc):
         if rc == 0:
@@ -78,13 +71,8 @@ def connect_mqtt() -> mqtt_client:
 def logformer(topic,message):
     now = datetime.now()
     date_time = now.strftime("%m/%d/%Y, %H:%M:%S")
-    # if e == 0:
-        # print(date_time +  " : Received " + message + " from " + topic + " topic")
     print(date_time + ": " + topic +": " + message)
-    # else:
-    #     print(date_time + " : Text value in topic : " + topic + " -- "+ message)
 
-###############
 def ins_to_db(device,topic,sensor,data):
     db=MySQLdb.connect(host="192.168.2.7",user="em",password="Emm",database="em", charset="utf8")
     cursor = db.cursor()
@@ -92,15 +80,11 @@ def ins_to_db(device,topic,sensor,data):
         query = "CALL DEVICES_STATUS_UPD (%s, %s, %s)"
         cursor.execute(query, (device,data,datetime.now()))
     if topic == 'sensor' or topic == 'binary_sensor':
-        # print(get_time())
-        # print(device+':'+sensor+':'+data)
         query = "CALL STATES_INS (%s, %s, %s , %s, %s)"
         cursor.execute(query, (device,sensor,data,datetime.now(),get_time()))
-   # datetime.now(),
     db.commit()
     cursor.close()
     db.close()
-    # time.sleep(10)
 ##############
 
 def subscribe(client: mqtt_client):
@@ -108,41 +92,38 @@ def subscribe(client: mqtt_client):
 
         topic_name = msg.topic.replace("-", "_")
         topic_data = topic_name.split("/")
-        # set_metrica(topic_data[0],topic_data[1],topic_data[2],topic_data[3],topic_data[4],value)
+
         device = topic_data[1]
         topic = topic_data[2]
         sensor = ''
         data = msg.payload.decode()
         if topic == 'sensor':
             sensor = topic_data[3]
-            ins_to_db(device,topic,sensor,data)
+            # ins_to_db(device,topic,sensor,data)
+            set_metrica(device, topic, sensor, data)
         if topic == 'debug':
-        #     # logformer(msg.topic, value)
             logformer(device, data)
-
         if topic == 'status':
-            # print(device+':'+data)
-            ins_to_db(device,topic,sensor,data)
+            # ins_to_db(device,topic,sensor,data)
+            sensor = device
+            if data == 'online': data = 1
+            else: data = 0
+            set_metrica(device, topic, sensor, data)
 
 
-
-    # topic_pattern = "monitors/+/sensor/#"
     topic_pattern = "monitors/+/#"
     client.subscribe(topic_pattern)
     client.on_message = on_message_data
 
-    # topic_pattern = "monitors/+/debug/"
-    # client.subscribe(topic_pattern)
-    # client.on_message = on_message_log
 
-# def set_metrica(p0,p1,p2,p3,p4,value):
-#     try:
-#         value = float(value)
-#         MQTT_VALUE.labels(p0,p1,p2,p3,p4).set(value)
-#     except  ValueError as e:
-#         logformer(p0+'/'+p1+'/'+p2+'/'+p3+'/'+p4,value,1)
-#         # print(e)
-#         MQTT_VALUE.labels(p0,p1,p2,p3,value).set(0)
+def set_metrica(p0,p1,p2,value):
+    try:
+        value = float(value)
+        MQTT_VALUE.labels(p0,p1,p2,value).set(value)
+    except  ValueError as e:
+        # logformer(p0+'/'+p1+'/'+p2+'/'+p3+'/'+p4,value,1)
+        # print(e)
+        MQTT_VALUE.labels(p0,p1,p2,value).set(0)
 
 def run():
     client = connect_mqtt()
@@ -151,10 +132,10 @@ def run():
 
 if __name__ == '__main__':
     try:
-    #     start_http_server(server_port)
+        start_http_server(server_port)
+        # run()
+        # sleep(get_delay)
+    except Exception as e: print(e)
+    while True:
         run()
         sleep(get_delay)
-    except Exception as e: print(e)
-    # while True:
-    #     run()
-    #     sleep(get_delay)

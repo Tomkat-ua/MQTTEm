@@ -1,3 +1,4 @@
 paho-mqtt
-mysqlclient
+# mysqlclient
+prometheus-client
 
