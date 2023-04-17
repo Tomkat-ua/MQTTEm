@@ -3,7 +3,7 @@
 import datetime
 import calendar
 # import MySQLdb
-appver = "0.0.4"
+appver = "0.0.5"
 appname = "Energy monitor MQTT extractor"
 appshortname = "MQTTEm"
 
@@ -117,7 +117,7 @@ def subscribe(client: mqtt_client):
 def set_metrica(p0,p1,p2,value):
     try:
         value = float(value)
-        MQTT_VALUE.labels(p0,p1,p2,value).set(value)
+        MQTT_VALUE.labels(p0,p1,p2,'value').set(value)
     except  ValueError as e:
         # logformer(p0+'/'+p1+'/'+p2+'/'+p3+'/'+p4,value,1)
         # print(e)
