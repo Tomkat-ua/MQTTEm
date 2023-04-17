@@ -3,7 +3,7 @@
 import datetime
 import calendar
 # import MySQLdb
-appver = "0.0.3"
+appver = "0.0.4"
 appname = "Energy monitor MQTT extractor"
 appshortname = "MQTTEm"
 
@@ -12,7 +12,7 @@ from paho.mqtt import client as mqtt_client
 from prometheus_client import start_http_server, Gauge
 from time import sleep as sleep
 from datetime import datetime
-# from os import environ as environ
+from os import environ as environ
 # import os
 #import bot,asyncio
 
@@ -21,14 +21,13 @@ from datetime import datetime
 print(appname + " ver. "+appver)
 tab='  |'
 
-env ='prod' #dev/prod
+env ='dev' #dev/prod
 
 if env == 'prod':
-    # server_port =int(environ.get('SERVER_PORT'))
+    server_port =int(environ.get('SERVER_PORT'))
     get_delay = int(environ.get('GET_DELAY'))
     broker = environ.get('BROKER_IP')
     port = int(environ.get('BROKER_PORT'))
-    # topic_pattern = environ.get('TOPIC')
     username = environ.get('USERNAME')
     password = environ.get('PASSWORD')
 else:
