@@ -3,7 +3,7 @@
 import datetime
 import calendar
 # import MySQLdb
-appver = "0.1.2"
+appver = "0.1.3"
 appname = "Energy monitor MQTT extractor"
 appshortname = "MQTTEm"
 
@@ -103,8 +103,8 @@ def subscribe(client: mqtt_client):
         if topic == 'sensor':
             sensor = topic_data[3]
             # ins_to_db(device,topic,sensor,data)
-            if sensor == sensor_real_counter_name:
-                data = float(data) + float(sensor_real_counter_value)
+            # if sensor == sensor_real_counter_name:
+            #     data = float(data) + float(sensor_real_counter_value)
             set_metrica(device, topic, sensor, data)
         if topic == 'debug':
             logformer(device, data)
@@ -121,14 +121,14 @@ def subscribe(client: mqtt_client):
     client.on_message = on_message_data
 
 
-def set_metrica(p0,p1,p2,value):
+def set_metrica(device,topic,sensor,value):
     try:
         value = float(value)
-        MQTT_VALUE.labels(p0,p1,p2,'value').set(value)
+        if sensor == sensor_real_counter_name:
+            value = value + float(sensor_real_counter_value)
+        MQTT_VALUE.labels(device,topic,sensor,'value').set(value)
     except  ValueError as e:
-        # logformer(p0+'/'+p1+'/'+p2+'/'+p3+'/'+p4,value,1)
-        # print(e)
-        MQTT_VALUE.labels(p0,p1,p2,value).set(0)
+        MQTT_VALUE.labels(device,topic,sensor,value).set(0)
 
 def run():
     client = connect_mqtt()
