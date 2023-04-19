@@ -18,8 +18,9 @@ docker run -d  -p 8084:80 \
     -e GET_DELAY=10 \
     -e BROKER_IP='172.18.0.2' \
     -e BROKER_PORT=1883 \
-    -e SENSOR_REAL_COUNER_NAME='em1_1_energy_meter'  \
-    -e SENSOR_REAL_COUNER_VALUE=5678 \
+    -e SENSOR_REAL_COUTNER_NAME='em1_1_energy_meter'  \
+    -e SENSOR_REAL_COUTNER_VALUE=5678 \
+    -e TOPIC_PATTERN='monitors/+/#'  \
     -e USERNAME='mqtt' \
     -e PASSWORD='mqtt001' \
        $img

@@ -3,7 +3,7 @@
 import datetime
 import calendar
 # import MySQLdb
-appver = "0.1.0"
+appver = "0.1.2"
 appname = "Energy monitor MQTT extractor"
 appshortname = "MQTTEm"
 
@@ -30,8 +30,9 @@ if env == 'prod':
     port = int(environ.get('BROKER_PORT'))
     username = environ.get('USERNAME')
     password = environ.get('PASSWORD')
-    sensor_real_counter_name = environ.get('SENSOR_REAL_COUNER_NAME')
-    sensor_real_counter_value = environ.get('SENSOR_REAL_COUNER_VALUE')
+    sensor_real_counter_name = environ.get('SENSOR_REAL_COUNTER_NAME')
+    sensor_real_counter_value = environ.get('SENSOR_REAL_COUNTER_VALUE')
+    topic_pattern = environ.get('TOPIC_PATTERN')
 else:
     server_port=int('8081')
     get_delay = 10
@@ -41,7 +42,7 @@ else:
     password = 'mqtt001'
     sensor_real_counter_name = 'em1_1_energy_meter'
     sensor_real_counter_value = 333
-
+    topic_pattern = "monitors/+/#"
 # generate client ID with pub prefix randomly
 client_id = f'python-mqtt-{random.randint(0, 100)}'
 
@@ -115,7 +116,7 @@ def subscribe(client: mqtt_client):
             set_metrica(device, topic, sensor, data)
 
 
-    topic_pattern = "monitors/+/#"
+    # topic_pattern = "monitors/+/#"
     client.subscribe(topic_pattern)
     client.on_message = on_message_data
 
