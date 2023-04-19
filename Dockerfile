@@ -1,6 +1,6 @@
 FROM python:3-slim
 #alpine
-
+RUN pip install --upgrade pip
 WORKDIR /usr/src/app
 
 COPY ./requirements.txt ./
