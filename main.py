@@ -3,7 +3,7 @@
 import datetime
 import calendar
 # import MySQLdb
-appver = "0.1.4"
+appver = "0.1.5"
 appname = "Energy monitor MQTT extractor"
 appshortname = "MQTTEm"
 
@@ -46,8 +46,8 @@ client_id = f'python-mqtt-{random.randint(0, 100)}'
 
 # topic_pattern = "monitors/+/sensor/#"
 MQTT_VALUE = Gauge('esphome_sensor_state', 'topic', ['device','topic','sensor','data'])
-APP_INFO = Gauge('app_info', 'Return app info',['appname','appshortname','version'])
-APP_INFO.labels(appname,appshortname,appver).set(1)
+APP_INFO = Gauge('app_info', 'Return app info',['appname','appshortname','version','env'])
+APP_INFO.labels(appname,appshortname,appver,env).set(1)
 
 
 def get_time():
