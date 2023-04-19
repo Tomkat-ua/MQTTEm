@@ -3,7 +3,7 @@
 import datetime
 import calendar
 # import MySQLdb
-appver = "0.1.3"
+appver = "0.1.4"
 appname = "Energy monitor MQTT extractor"
 appshortname = "MQTTEm"
 
@@ -13,15 +13,13 @@ from prometheus_client import start_http_server, Gauge
 from time import sleep as sleep
 from datetime import datetime
 from os import environ as environ
-# import os
-#import bot,asyncio
-
-# os.environ['TZ'] = 'Europe/London'
+from sys import argv
 
 print(appname + " ver. "+appver)
 tab='  |'
 
-env ='dev' #dev/prod
+#env ='dev' #dev/prod
+env = argv[1]
 
 if env == 'prod':
     server_port =int(environ.get('SERVER_PORT'))
