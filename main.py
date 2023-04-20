@@ -1,12 +1,9 @@
 # python3.6
 #### Energy monitor MQTT extractor
+
 import datetime
 import calendar
 # import MySQLdb
-appver = "0.1.5"
-appname = "Energy monitor MQTT extractor"
-appshortname = "MQTTEm"
-
 import random
 from paho.mqtt import client as mqtt_client
 from prometheus_client import start_http_server, Gauge
@@ -15,11 +12,14 @@ from datetime import datetime
 from os import environ as environ
 from sys import argv
 
+appver = "0.1.5"
+appname = "Energy monitor MQTT extractor"
+appshortname = "MQTTEm"
 print(appname + " ver. "+appver)
 tab='  |'
-
 #env ='dev' #dev/prod
 env = argv[1]
+device_status = 0
 
 if env == 'prod':
     server_port =int(environ.get('SERVER_PORT'))
