@@ -12,7 +12,7 @@ from datetime import datetime
 from os import environ as environ
 from sys import argv
 
-appver = "0.1.6"
+appver = "0.1.7"
 appname = "Energy monitor MQTT extractor"
 appshortname = "MQTTEm"
 print(appname + " ver. "+appver)
@@ -28,17 +28,17 @@ if env == 'prod':
     username = environ.get('USERNAME')
     password = environ.get('PASSWORD')
     sensor_real_counter_name = environ.get('SENSOR_REAL_COUNTER_NAME')
-    sensor_real_counter_value = environ.get('SENSOR_REAL_COUNTER_VALUE')
+    sensor_real_counter_value = float(environ.get('SENSOR_REAL_COUNTER_VALUE'))
     topic_pattern = environ.get('TOPIC_PATTERN')
 else:
     server_port=int('8081')
-    get_delay = 10
+    get_delay = 20
     broker = 'ha.tomkat.cc'
     port = 1883
     username = 'mqtt'
     password = 'mqtt001'
     sensor_real_counter_name = 'em1_1_energy_meter'
-    sensor_real_counter_value = 333
+    sensor_real_counter_value = 25821
     topic_pattern = "monitors/+/#"
 # generate client ID with pub prefix randomly
 client_id = f'python-mqtt-{random.randint(0, 100)}'
@@ -114,13 +114,15 @@ def subscribe(client: mqtt_client):
 
     client.subscribe(topic_pattern)
     client.on_message = on_message_data
+    sleep(get_delay)
 
 def set_metrica(device,topic,sensor,value):
     try:
         value = float(value)
         if sensor == sensor_real_counter_name:
-            value = value + float(sensor_real_counter_value)
+            value = value + sensor_real_counter_value
         MQTT_VALUE.labels(device,topic,sensor,'value').set(value)
+
     except  ValueError as e:
         MQTT_VALUE.labels(device,topic,sensor,value).set(0)
 
@@ -128,7 +130,6 @@ def run():
     client = connect_mqtt()
     subscribe(client)
     client.loop_forever()
-    sleep(get_delay)
 
 if __name__ == '__main__':
     try:
