@@ -12,14 +12,13 @@ from datetime import datetime
 from os import environ as environ
 from sys import argv
 
-appver = "0.1.5"
+appver = "0.1.6"
 appname = "Energy monitor MQTT extractor"
 appshortname = "MQTTEm"
 print(appname + " ver. "+appver)
 tab='  |'
-#env ='dev' #dev/prod
 env = argv[1]
-device_status = 0
+
 
 if env == 'prod':
     server_port =int(environ.get('SERVER_PORT'))
@@ -44,14 +43,14 @@ else:
 # generate client ID with pub prefix randomly
 client_id = f'python-mqtt-{random.randint(0, 100)}'
 
-# topic_pattern = "monitors/+/sensor/#"
 MQTT_VALUE = Gauge('esphome_sensor_state', 'topic', ['device','topic','sensor','data'])
 APP_INFO = Gauge('app_info', 'Return app info',['appname','appshortname','version','env'])
 APP_INFO.labels(appname,appshortname,appver,env).set(1)
 
 
-def get_time():
 
+
+def get_time():
     date = datetime.utcnow()
     utc_time = calendar.timegm(date.utctimetuple())
     return(utc_time)
@@ -89,35 +88,32 @@ def ins_to_db(device,topic,sensor,data):
 ##############
 
 def subscribe(client: mqtt_client):
+    device_status = 0
     def on_message_data(client, userdata, msg):
-
+        nonlocal device_status
         topic_name = msg.topic.replace("-", "_")
         topic_data = topic_name.split("/")
-
         device = topic_data[1]
         topic = topic_data[2]
-        sensor = ''
         data = msg.payload.decode()
-        if topic == 'sensor':
-            sensor = topic_data[3]
-            # ins_to_db(device,topic,sensor,data)
-            # if sensor == sensor_real_counter_name:
-            #     data = float(data) + float(sensor_real_counter_value)
-            set_metrica(device, topic, sensor, data)
         if topic == 'debug':
             logformer(device, data)
+        if topic == 'sensor':
+            sensor = topic_data[3]
+            set_metrica(device, topic, sensor, data)
         if topic == 'status':
-            # ins_to_db(device,topic,sensor,data)
             sensor = device
-            if data == 'online': data = 1
-            else: data = 0
+            if data == 'online':
+                data = 1
+                device_status = 1
+            else:
+                data = 0
+                device_status = 0
+                set_metrica(device, topic, sensor, data)
             set_metrica(device, topic, sensor, data)
 
-
-    # topic_pattern = "monitors/+/#"
     client.subscribe(topic_pattern)
     client.on_message = on_message_data
-
 
 def set_metrica(device,topic,sensor,value):
     try:
@@ -132,13 +128,12 @@ def run():
     client = connect_mqtt()
     subscribe(client)
     client.loop_forever()
+    sleep(get_delay)
 
 if __name__ == '__main__':
     try:
         start_http_server(server_port)
-        # run()
-        # sleep(get_delay)
     except Exception as e: print(e)
     while True:
         run()
-        sleep(get_delay)
+
