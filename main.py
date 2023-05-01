@@ -12,12 +12,13 @@ from datetime import datetime
 from os import environ as environ
 from sys import argv
 
-appver = "0.1.7"
+appver = "0.2.1"
 appname = "Energy monitor MQTT extractor"
 appshortname = "MQTTEm"
 print(appname + " ver. "+appver)
 tab='  |'
 env = argv[1]
+
 
 
 if env == 'prod':
@@ -32,23 +33,22 @@ if env == 'prod':
     topic_pattern = environ.get('TOPIC_PATTERN')
 else:
     server_port=int('8081')
-    get_delay = 20
+    get_delay = 5
     broker = 'ha.tomkat.cc'
     port = 1883
     username = 'mqtt'
     password = 'mqtt001'
-    sensor_real_counter_name = 'em1_1_energy_meter'
+    sensor_real_counter_name = 'energy_meter'
     sensor_real_counter_value = 25821
     topic_pattern = "monitors/+/#"
 # generate client ID with pub prefix randomly
 client_id = f'python-mqtt-{random.randint(0, 100)}'
 
-MQTT_VALUE = Gauge('esphome_sensor_state', 'topic', ['device','topic','sensor','data'])
+MQTT_VALUE = Gauge('esphome_sensor_state', 'topic', ['device','topic','sensor','data','device_location'])
 APP_INFO = Gauge('app_info', 'Return app info',['appname','appshortname','version','env'])
 APP_INFO.labels(appname,appshortname,appver,env).set(1)
 
-
-
+device_location = ''
 
 def get_time():
     date = datetime.utcnow()
@@ -96,7 +96,7 @@ def subscribe(client: mqtt_client):
         device = topic_data[1]
         topic = topic_data[2]
         data = msg.payload.decode()
-        if topic == 'debug':
+        if topic == 'debug' and env == 'prod':
             logformer(device, data)
         if topic == 'sensor':
             sensor = topic_data[3]
@@ -116,15 +116,17 @@ def subscribe(client: mqtt_client):
     client.on_message = on_message_data
     sleep(get_delay)
 
-def set_metrica(device,topic,sensor,value):
+def set_metrica(device,topic,sensor,data):
     try:
-        value = float(value)
-        if sensor == sensor_real_counter_name:
-            value = value + sensor_real_counter_value
-        MQTT_VALUE.labels(device,topic,sensor,'value').set(value)
-
+        if sensor == 'location':
+            global device_location
+            device_location = data
+        data = float(data)
+        if sensor in sensor_real_counter_name:
+            data = data + sensor_real_counter_value
+        MQTT_VALUE.labels(device,topic,sensor,'value',device_location).set(data)
     except  ValueError as e:
-        MQTT_VALUE.labels(device,topic,sensor,value).set(0)
+        MQTT_VALUE.labels(device,topic,sensor,data,device_location).set(0)
 
 def run():
     client = connect_mqtt()
