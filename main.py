@@ -3,7 +3,6 @@
 
 import datetime
 import calendar
-# import MySQLdb
 import random
 from paho.mqtt import client as mqtt_client
 from prometheus_client import start_http_server, Gauge
@@ -12,7 +11,7 @@ from datetime import datetime
 from os import environ as environ
 from sys import argv
 
-appver = "0.2.1"
+appver = "0.3.1"
 appname = "Energy monitor MQTT extractor"
 appshortname = "MQTTEm"
 print(appname + " ver. "+appver)
@@ -41,14 +40,27 @@ else:
     sensor_real_counter_name = 'energy_meter'
     sensor_real_counter_value = 25821
     topic_pattern = "monitors/+/#"
+    # topic_pattern = "monitors/em2/+/#"
 # generate client ID with pub prefix randomly
 client_id = f'python-mqtt-{random.randint(0, 100)}'
 
-MQTT_VALUE = Gauge('esphome_sensor_state', 'topic', ['device','topic','sensor','data','device_location'])
+# MQTT_VALUE = Gauge('esphome_sensor_state', 'topic', ['device','topic','sensor','data','device_location'])
+# METRICA_DEVICE = Gauge('esphome_device_state', 'ESPHome device state metrica', ['device','location','firmware_ver','wifi_ssid','wifi_ip','wifi_mac','device_status'])
+METRICA_DEVICE = Gauge('esphome_device_state', 'ESPHome device state metrica', ['device','property','value'])
+METRICA_SENSOR = Gauge('esphome_sensor_state', 'ESPHome sensor state metrica', ['device','sensor'])
 APP_INFO = Gauge('app_info', 'Return app info',['appname','appshortname','version','env'])
 APP_INFO.labels(appname,appshortname,appver,env).set(1)
+################----------------------------------------------------------------------------------------------
+class Device:
+    device_name=''
 
-device_location = ''
+class Topic():
+    name=''
+    raw=''
+    data=''
+
+################----------------------------------------------------------------------------------------------
+
 
 def get_time():
     date = datetime.utcnow()
@@ -68,65 +80,47 @@ def connect_mqtt() -> mqtt_client:
     client.connect(broker, port)
     return client
 
-def logformer(topic,message):
-    now = datetime.now()
-    date_time = now.strftime("%m/%d/%Y, %H:%M:%S")
-    print(date_time + ": " + topic +": " + message)
 
-def ins_to_db(device,topic,sensor,data):
-    db=MySQLdb.connect(host="192.168.2.7",user="em",password="Emm",database="em", charset="utf8")
-    cursor = db.cursor()
-    if topic == 'status':
-        query = "CALL DEVICES_STATUS_UPD (%s, %s, %s)"
-        cursor.execute(query, (device,data,datetime.now()))
-    if topic == 'sensor' or topic == 'binary_sensor':
-        query = "CALL STATES_INS (%s, %s, %s , %s, %s)"
-        cursor.execute(query, (device,sensor,data,datetime.now(),get_time()))
-    db.commit()
-    cursor.close()
-    db.close()
+
 ##############
 
 def subscribe(client: mqtt_client):
-    device_status = 0
+    em = Device()
+    # device_name=''
+    topic = Topic()
+    def set_metrica(sensor, data):
+        METRICA_DEVICE.labels(em.device_name, topic.name[2], sensor).set(data)
+
+    def logformer():
+        now = datetime.now()
+        date_time = now.strftime("%m/%d/%Y, %H:%M:%S")
+        print(date_time + ": " + em.device_name + ": " + topic.data)
+
     def on_message_data(client, userdata, msg):
-        nonlocal device_status
-        topic_name = msg.topic.replace("-", "_")
-        topic_data = topic_name.split("/")
-        device = topic_data[1]
-        topic = topic_data[2]
-        data = msg.payload.decode()
-        if topic == 'debug' and env == 'prod':
-            logformer(device, data)
-        if topic == 'sensor':
-            sensor = topic_data[3]
-            set_metrica(device, topic, sensor, data)
-        if topic == 'status':
-            sensor = device
-            if data == 'online':
-                data = 1
-                device_status = 1
-            else:
-                data = 0
-                device_status = 0
-                set_metrica(device, topic, sensor, data)
-            set_metrica(device, topic, sensor, data)
+
+        topic.raw = msg.topic
+        topic.name = topic.raw.replace("-", "_")
+        topic.data = msg.payload.decode()
+        topic.name = topic.name.split("/")
+        # device_name = topic.name[1]
+        em.device_name = topic.name[1]
+        if topic.name[2] == 'sensor':
+            METRICA_SENSOR.labels(em.device_name,topic.name[3]).set(topic.data)
+        else:
+            if topic.name[2] == 'location':     set_metrica( topic.data, 0)
+            if topic.name[2] == 'firmware_ver': set_metrica( topic.data, 0)
+            if topic.name[2] == 'logs':         logformer()
+            if topic.name[2] == 'status':
+                if topic.data == 'online': set_metrica('', 1)
+                else: set_metrica('', 0)
+            if topic.name[2] == 'wifi_mac':  set_metrica(topic.data, 0)
+            if topic.name[2] == 'wifi_ip':   set_metrica(topic.data, 0)
+            if topic.name[2] == 'wifi_ssid': set_metrica(topic.data, 0)
+
 
     client.subscribe(topic_pattern)
     client.on_message = on_message_data
     sleep(get_delay)
-
-def set_metrica(device,topic,sensor,data):
-    try:
-        if sensor == 'location':
-            global device_location
-            device_location = data
-        data = float(data)
-        if sensor in sensor_real_counter_name:
-            data = data + sensor_real_counter_value
-        MQTT_VALUE.labels(device,topic,sensor,'value',device_location).set(data)
-    except  ValueError as e:
-        MQTT_VALUE.labels(device,topic,sensor,data,device_location).set(0)
 
 def run():
     client = connect_mqtt()
